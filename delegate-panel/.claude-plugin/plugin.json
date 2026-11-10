@@ -1,0 +1,6 @@
+{
+  "name": "delegate-panel",
+  "version": "0.1.0",
+  "description": "Live pane for agent-delegate: running and finished delegation jobs (agy, codex) and per-agent stats from the delegation log.",
+  "types": "./types/index.d.ts"
+}

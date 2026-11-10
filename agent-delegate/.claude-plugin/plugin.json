@@ -1,0 +1,9 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "agent-delegate",
+  "version": "0.1.0",
+  "description": "Route work from Claude to Antigravity (agy) and Codex in isolated git worktrees, verify, review, and escalate.",
+  "skills": [
+    "./"
+  ]
+}

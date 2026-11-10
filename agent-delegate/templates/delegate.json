@@ -1,0 +1,12 @@
+{
+  "build": "npm run build",
+  "test": "npm test",
+  "log": ".delegate/log.jsonl",
+  "linkDirs": ["node_modules"],
+  "risky": ["package.json"],
+  "protected": [],
+  "rules": "",
+  "reviewMaxLines": 400,
+  "agy": { "model": "gemini-3.8-flash-high", "timeout": "30m", "allow": [] },
+  "codex": { "model": "gpt-5.6-luna", "baseUrl": "https://chatgpt.com/backend-api/codex" }
+}

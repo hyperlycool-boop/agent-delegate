@@ -1,0 +1,16 @@
+{
+  "name": "agent-delegate",
+  "owner": { "name": "hyperlycool-boop" },
+  "plugins": [
+    {
+      "name": "agent-delegate",
+      "source": "./agent-delegate",
+      "description": "Route work from Claude to Antigravity (agy) and Codex in isolated git worktrees, then verify, review, and escalate."
+    },
+    {
+      "name": "delegate-panel",
+      "source": "./delegate-panel",
+      "description": "Live pane for agent-delegate: running and finished delegation jobs and per-agent stats. Also makes Claude delegate without asking in repos that have a .delegate.json."
+    }
+  ]
+}
