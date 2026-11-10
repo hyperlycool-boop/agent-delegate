@@ -1,21 +1,41 @@
 #!/bin/bash
 # Run one delegated task with agy or codex in an isolated git worktree.
-# Usage: run.sh <agy|codex> <slug> <brief-file>
+# Usage: run.sh <agy|codex> <slug> <brief-file> [--model <name>] [--effort <level>]
+# Model and effort: flag > overrides.json (Delegation pane) > .delegate.json > agent default.
 # Agents run sandboxed and may edit only the worktree. This script runs the
 # project's build and test commands itself and prints a short report.
 set -euo pipefail
-source "$(dirname "$0")/common.sh"
+SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPTS/common.sh"
 
+USAGE="Usage: run.sh <agy|codex> <slug> <brief-file> [--model <name>] [--effort <level>]"
 AGENT="${1:-}"; SLUG="${2:-}"; BRIEF="${3:-}"
 if [ -z "$AGENT" ] || [ -z "$SLUG" ] || [ ! -f "$BRIEF" ]; then
-  echo "Usage: run.sh <agy|codex> <slug> <brief-file>" >&2; exit 1
+  echo "$USAGE" >&2; exit 1
 fi
+shift 3
+MODEL_FLAG=""; EFFORT_FLAG=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --model) MODEL_FLAG="${2:-}"; shift 2 ;;
+    --effort) EFFORT_FLAG="${2:-}"; shift 2 ;;
+    *) echo "Unknown option: $1" >&2; echo "$USAGE" >&2; exit 1 ;;
+  esac
+done
 case "$SLUG" in *[!a-z0-9-]*) echo "Slug must be lowercase letters, digits and dashes." >&2; exit 1 ;; esac
+
+if [ "$AGENT" = "agy" ]; then
+  MODEL="${MODEL_FLAG:-$AGY_MODEL}"; EFFORT="${EFFORT_FLAG:-$AGY_EFFORT}"
+else
+  MODEL="${MODEL_FLAG:-$CODEX_MODEL}"; EFFORT="${EFFORT_FLAG:-$CODEX_EFFORT}"
+fi
 
 WT="$WORKTREES/$SLUG"
 LOG="$LOG_DIR/$SLUG.$AGENT.log"
 LAST="$LOG_DIR/$SLUG.$AGENT.last.md"
+LIVE="$LOG_DIR/$SLUG.$AGENT.live"
 mkdir -p "$LOG_DIR" "$WORKTREES"
+: >"$LIVE"; : >"$LAST"
 BRIEF_ABS="$(cd "$(dirname "$BRIEF")" && pwd)/$(basename "$BRIEF")"
 
 if [ ! -d "$WT" ]; then
@@ -52,30 +72,41 @@ TASK BRIEF:
 $(cat "$BRIEF_ABS")"
 
 START=$(date +%s)
-log_json event start slug "$SLUG" agent "$AGENT"
+log_json event start slug "$SLUG" agent "$AGENT" model "$MODEL" effort "${EFFORT:-default}" \
+  live "$LIVE" last "$LAST" log "$LOG"
+echo "start  $AGENT · model $MODEL · effort ${EFFORT:-default}" >>"$LIVE"
 set +e
 if [ "$AGENT" = "agy" ]; then
-  (cd "$WT" && agy -p "$PROMPT" --model "$AGY_MODEL" --mode accept-edits --sandbox \
-    --settings "$(agy_settings_json)" --print-timeout "$AGY_TIMEOUT" >"$LAST" 2>"$LOG")
+  AGY_ARGS=(--model "$MODEL" --mode accept-edits --sandbox --settings "$(agy_settings_json)" \
+    --print-timeout "$AGY_TIMEOUT" --output-format stream-json)
+  if [ -n "$EFFORT" ]; then AGY_ARGS+=(--effort "$EFFORT"); fi
+  (cd "$WT" && agy -p "$PROMPT" "${AGY_ARGS[@]}" 2>"$LOG" | node "$SCRIPTS/agy-stream.js" "$LIVE" "$LAST"
+    exit "${PIPESTATUS[0]}")
 elif [ "$AGENT" = "codex" ]; then
-  codex exec -C "$WT" -s workspace-write --skip-git-repo-check \
-    -c "openai_base_url=\"$CODEX_BASE_URL\"" -m "$CODEX_MODEL" \
-    -o "$LAST" "$PROMPT" >"$LOG" 2>&1
+  CODEX_ARGS=(-C "$WT" -s workspace-write --skip-git-repo-check \
+    -c "openai_base_url=\"$CODEX_BASE_URL\"" -m "$MODEL" -o "$LAST")
+  if [ -n "$EFFORT" ]; then CODEX_ARGS+=(-c "model_reasoning_effort=\"$EFFORT\""); fi
+  codex exec "${CODEX_ARGS[@]}" "$PROMPT" >>"$LIVE" 2>&1
 else
   echo "Unknown agent: $AGENT (use agy or codex)" >&2; exit 1
 fi
 AGENT_EXIT=$?
 set -e
+[ "$AGENT" = "codex" ] && cat "$LIVE" >>"$LOG"
 # An empty reply means the agent did not really run (e.g. a denied permission).
 [ "$AGENT_EXIT" -eq 0 ] && [ ! -s "$LAST" ] && AGENT_EXIT=99
 SECONDS_TAKEN=$(( $(date +%s) - START ))
 
-check() {
-  [ -z "$1" ] && { echo "SKIP"; return; }
-  if (cd "$WT" && bash -c "$1" >>"$LOG" 2>&1); then echo "PASS"; else echo "FAIL"; fi
+check() { # check <label> <command>
+  local result
+  if [ -z "$2" ]; then result="SKIP"
+  elif (cd "$WT" && bash -c "$2" >>"$LOG" 2>&1); then result="PASS"
+  else result="FAIL"; fi
+  echo "check  $1 $result" >>"$LIVE"
+  echo "$result"
 }
-BUILD=$(check "$BUILD_CMD")
-TESTS=$(check "$TEST_CMD")
+BUILD=$(check build "$BUILD_CMD")
+TESTS=$(check tests "$TEST_CMD")
 
 git -C "$WT" add -A >/dev/null
 FILES=$(git -C "$WT" diff --cached --name-only HEAD | wc -l | tr -d ' ')
@@ -100,4 +131,5 @@ fi
 echo "== full log: $LOG"
 
 log_json slug "$SLUG" agent "$AGENT" seconds "$SECONDS_TAKEN" agent_exit "$AGENT_EXIT" \
-  build "$BUILD" tests "$TESTS" files "$FILES" verdict pending
+  build "$BUILD" tests "$TESTS" files "$FILES" model "$MODEL" effort "${EFFORT:-default}" \
+  live "$LIVE" last "$LAST" verdict pending

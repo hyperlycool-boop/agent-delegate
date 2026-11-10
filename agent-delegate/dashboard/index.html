@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delegation dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="nav">
+    <div class="nav__brand">
+      <span class="nav__mark" aria-hidden="true"></span>
+      <span class="nav__name">agent-delegate</span>
+      <span class="badge" id="repo">…</span>
+    </div>
+    <div class="nav__status" id="status" aria-live="polite">Connecting…</div>
+  </header>
+
+  <main class="page">
+    <section class="intro">
+      <p class="eyebrow">Delegation</p>
+      <h1 class="heading">Jobs handed off to agy and Codex</h1>
+      <p class="lede">Pick a job to read its result or watch it live. The models you choose below are used by the next run.</p>
+    </section>
+
+    <div class="grid">
+      <section class="card card--jobs" aria-labelledby="jobs-title">
+        <div class="card__head">
+          <h2 class="title" id="jobs-title">Jobs</h2>
+          <span class="meta" id="jobs-count"></span>
+        </div>
+        <ul class="jobs" id="jobs" role="listbox" aria-label="Delegated jobs"></ul>
+        <div class="empty" id="jobs-empty" hidden>
+          <p class="empty__title">No delegated jobs yet</p>
+          <p class="meta">Run <code>/agent-delegate:delegate &lt;task&gt;</code> in Claude Code.</p>
+        </div>
+      </section>
+
+      <section class="card card--output" aria-labelledby="output-title">
+        <div class="card__head">
+          <div>
+            <h2 class="title" id="output-title">Output</h2>
+            <p class="meta" id="output-job">No job selected</p>
+          </div>
+          <div class="segmented" role="group" aria-label="Output view">
+            <button class="segmented__btn" data-mode="result" aria-pressed="true">Result</button>
+            <button class="segmented__btn" data-mode="live" aria-pressed="false">Live</button>
+          </div>
+        </div>
+        <pre class="output" id="output" tabindex="0" aria-live="polite"></pre>
+      </section>
+
+      <section class="card card--models" aria-labelledby="models-title">
+        <div class="card__head">
+          <div>
+            <h2 class="title" id="models-title">Models</h2>
+            <p class="meta" id="models-meta">Loading model lists…</p>
+          </div>
+          <button class="btn-utility" id="refresh-models">Refresh models</button>
+        </div>
+        <div class="models">
+          <div class="model-row" data-agent="agy">
+            <span class="model-row__agent"><span class="dot dot--agy"></span>agy</span>
+            <label class="field"><span class="field__label">Model</span><select data-field="model"></select></label>
+            <label class="field"><span class="field__label">Effort</span><select data-field="effort"></select></label>
+          </div>
+          <div class="model-row" data-agent="codex">
+            <span class="model-row__agent"><span class="dot dot--codex"></span>codex</span>
+            <label class="field"><span class="field__label">Model</span><select data-field="model"></select></label>
+            <label class="field"><span class="field__label">Effort</span><select data-field="effort"></select></label>
+          </div>
+        </div>
+        <p class="meta" id="models-saved" aria-live="polite"></p>
+      </section>
+
+      <section class="card card--stats" aria-labelledby="stats-title">
+        <div class="card__head"><h2 class="title" id="stats-title">Agents</h2></div>
+        <table class="table">
+          <thead>
+            <tr><th scope="col">Agent</th><th scope="col">Runs</th><th scope="col">Avg time</th><th scope="col">Failed</th><th scope="col">Accepted</th><th scope="col">Rejected</th><th scope="col">Escalated</th></tr>
+          </thead>
+          <tbody id="stats"></tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

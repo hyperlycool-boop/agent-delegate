@@ -9,17 +9,24 @@ DELEGATE_HOME="$HOME/.cache/agent-delegate/$REPO_NAME"
 WORKTREES="$DELEGATE_HOME/worktrees"
 LOG_DIR="$DELEGATE_HOME/logs"
 
+OVERRIDES="$DELEGATE_HOME/overrides.json"
+
 # cfg <dotted.key> [default] — prints a config value; arrays print one item per line.
+# Precedence: overrides.json (set from the Delegation pane) > .delegate.json > default.
 cfg() {
   node -e '
     const fs = require("fs");
-    const [file, key, fallback] = process.argv.slice(1);
-    let conf = {};
-    try { conf = JSON.parse(fs.readFileSync(file, "utf8")); } catch {}
+    const [file, key, fallback, overrides] = process.argv.slice(1);
+    const load = f => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return {}; } };
+    const conf = load(file);
+    for (const [k, v] of Object.entries(load(overrides))) {
+      if (v && typeof v === "object" && !Array.isArray(v)) conf[k] = { ...(conf[k] || {}), ...v };
+      else conf[k] = v;
+    }
     let v = key.split(".").reduce((o, k) => (o == null ? undefined : o[k]), conf);
-    if (v === undefined) v = fallback === undefined ? "" : fallback;
+    if (v === undefined || v === "") v = fallback === undefined ? "" : fallback;
     process.stdout.write(Array.isArray(v) ? v.join("\n") : typeof v === "object" ? JSON.stringify(v) : String(v));
-  ' "$CFG" "$1" "${2-}"
+  ' "$CFG" "$1" "${2-}" "$OVERRIDES"
 }
 
 DEFAULT_AGY_ALLOW='command(ls)
@@ -49,8 +56,10 @@ RISKY_PATHS="$(cfg risky "")"
 PROTECTED_PATHS="$(cfg protected "")"
 EXTRA_RULES="$(cfg rules "")"
 AGY_MODEL="$(cfg agy.model "gemini-3.8-flash-high")"
+AGY_EFFORT="$(cfg agy.effort "")"
 AGY_TIMEOUT="$(cfg agy.timeout "30m")"
 CODEX_MODEL="$(cfg codex.model "gpt-5.6-luna")"
+CODEX_EFFORT="$(cfg codex.effort "")"
 CODEX_BASE_URL="$(cfg codex.baseUrl "https://chatgpt.com/backend-api/codex")"
 REVIEW_MAX_LINES="$(cfg reviewMaxLines "400")"
 

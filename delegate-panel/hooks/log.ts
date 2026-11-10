@@ -40,8 +40,9 @@ export function parseLog(text: string, maxJobs = 20): { jobs: Job[]; stats: Agen
     if (!slug) continue
     const agent = str(e.agent)
 
+    const paths = { model: str(e.model), effort: str(e.effort), live: str(e.live), last: str(e.last) }
     if (e.event === 'start' && agent) {
-      jobs.set(slug, { slug, agent, status: 'running', startedTs: num(e.ts) })
+      jobs.set(slug, { slug, agent, status: 'running', startedTs: num(e.ts), ...paths })
       touch(slug)
     } else if (agent) {
       const prev = jobs.get(slug)
@@ -50,6 +51,10 @@ export function parseLog(text: string, maxJobs = 20): { jobs: Job[]; stats: Agen
         agent,
         status: 'review',
         startedTs: prev?.startedTs,
+        model: paths.model ?? prev?.model,
+        effort: paths.effort ?? prev?.effort,
+        live: paths.live ?? prev?.live,
+        last: paths.last ?? prev?.last,
         seconds: num(e.seconds),
         build: str(e.build),
         tests: str(e.tests),
