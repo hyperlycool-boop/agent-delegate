@@ -17,8 +17,10 @@ Scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts/`. Run them from inside the targe
 |---|---|---|
 | Hard reasoning: architecture, root-cause debugging, correctness of math/logic, planning, reviewing delegated diffs | Claude itself | — |
 | Token-heavy: read/summarize many files, whole-repo audits, bulk docs, refactors across many files, long loops | **agy** | codex → Sonnet subagent |
-| Small/medium code edits and tests from a clear plan | **codex** | agy → Sonnet subagent |
-| Menial: renames, formatting, boilerplate, lint fixes, link checks | agy or codex | Haiku subagent (`model: "haiku"`) |
+| Medium (Sonnet-class): features from a clear plan, content checks, test writing, reviews of small diffs | **agy with Gemini 4 Argon** (`--model gemini-4-argon-high`) or **codex** | the other one → Sonnet subagent |
+| Menial: renames, formatting, boilerplate, lint fixes, link checks | agy with Gemini 3.8 Flash, or codex | Haiku subagent (`model: "haiku"`) |
+
+**Argon sits in Sonnet's bracket.** Anything you would give a Sonnet subagent goes to Argon first (agy), Sonnet only as the fallback. Argon effort: `medium` by default, `high` for harder tasks. Flash stays for menial and bulk reading, where it is cheaper.
 
 - **Do it yourself** if the task would cost you under ~2k tokens; a brief plus review costs more.
 - Project rules (CLAUDE.md / AGENTS.md / `.delegate.json` `protected`) still apply. Content the project marks as correctness-critical may be drafted by a delegate, but you re-verify every fact, formula and answer before keeping it.
@@ -28,7 +30,7 @@ Scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts/`. Run them from inside the targe
 
 1. **Check once per session:** `${CLAUDE_PLUGIN_ROOT}/scripts/doctor.sh`. No `.delegate.json` → run `/delegate-init` (or copy `templates/delegate.json`) and fill in the project's build/test commands.
 2. **Brief:** write ~200 tokens using `${CLAUDE_PLUGIN_ROOT}/templates/brief.md` (GOAL, FILES, DONE WHEN, DO NOT TOUCH, NOTES) to `~/.cache/agent-delegate/<repo>/briefs/<slug>.md`. The delegate reads AGENTS.md/CLAUDE.md itself; do not repeat project rules. Slug: lowercase-with-dashes.
-3. **Run:** `${CLAUDE_PLUGIN_ROOT}/scripts/run.sh <agy|codex> <slug> <brief-file> [--model <name>] [--effort <level>]`. Model and effort come from, in order: the flags, `~/.cache/agent-delegate/<repo>/overrides.json` (set by the user in the Delegation pane), `.delegate.json` (`agy.model`, `agy.effort`, `codex.model`, `codex.effort`), the agent default. Pass the flags only when the user asks for a specific model or effort. Run it in the background for long jobs; independent jobs on different files may run in parallel. It prints only: time, build/tests PASS/FAIL, diff stat, the agent's ≤10-line reply, first errors. Do not open the full log unless something failed.
+3. **Run:** `${CLAUDE_PLUGIN_ROOT}/scripts/run.sh <agy|codex> <slug> <brief-file> [--model <name>] [--effort <level>]`. Model and effort come from, in order: the flags, `~/.cache/agent-delegate/<repo>/overrides.json` (set by the user in the Delegation pane), `.delegate.json` (`agy.model`, `agy.effort`, `codex.model`, `codex.effort`), the agent default. If the user has set a model in the pane (`overrides.json` has a non-empty model for that agent) or asked for one, do not pass `--model`: theirs wins. Otherwise pass `--model` by tier: Argon for medium work, Flash for menial and bulk work. Run it in the background for long jobs; independent jobs on different files may run in parallel. It prints only: time, build/tests PASS/FAIL, diff stat, the agent's ≤10-line reply, first errors. Do not open the full log unless something failed.
 4. **Review:** `${CLAUDE_PLUGIN_ROOT}/scripts/review.sh <slug>`. Risky paths are shown in full; read them carefully. Spot-check any factual claim in the agent's reply against the repo.
 5. **Decide:** `${CLAUDE_PLUGIN_ROOT}/scripts/finish.sh <slug> <accept|reject|escalate> "<note>"`.
    - `accept` applies the diff to the current checkout, uncommitted.

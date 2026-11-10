@@ -23,7 +23,19 @@ claude plugin install delegate-panel --marketplace hyperlycool-boop/agent-delega
 
 In the desktop app, where `/plugin` does not run: click + next to the prompt box, then Plugins, Add marketplace with `hyperlycool-boop/agent-delegate`, then Add plugin.
 
-The repository is private. Installing needs GitHub access to it and a git credential for github.com on your machine (an SSH key, or `gh auth login` then `gh auth setup-git`).
+The repository is public, so installing needs no GitHub sign-in.
+
+## Install on another computer
+
+1. Install Claude Code and sign in.
+2. Install the two agents the plugin hands work to, and sign in to each:
+   - Antigravity CLI: run `curl -fsSL https://antigravity.google/cli/install.sh | bash`, then `agy` and choose Google OAuth. Read the script first if you prefer.
+   - Codex CLI: `npm i -g @openai/codex`, then `codex login`.
+3. In a terminal, install both plugins with the lines above.
+4. Open a project that is a git repository and run `/agent-delegate:delegate-init`, which creates `.delegate.json`.
+5. Run `/agent-delegate:delegate-doctor`. It lists anything still missing.
+
+Each computer keeps its own settings: model and effort choices, delegation logs and job output stay under `~/.cache/agent-delegate/`, and the per-project settings stay in the project's `.delegate.json`.
 
 ## Requirements
 

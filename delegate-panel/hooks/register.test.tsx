@@ -50,6 +50,7 @@ test('the auto-delegation rule names the repo and pre-authorizes delegation', ()
   expect(rule).toContain('/repo')
   expect(rule).toContain('do not ask before delegating')
   expect(rule).toContain('never authorizes committing')
+  expect(rule).toContain('gemini-4-argon-high')
 })
 
 test('the pane shows jobs, the result fallback, and saved model choices', async ($, on) => {
